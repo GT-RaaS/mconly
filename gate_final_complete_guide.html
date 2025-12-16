@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gate 2026 | Future Architect Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        /* --- 1. PRO Design System --- */
+        :root {
+            --bg-deep: #04050A;
+            --bg-card: #0E1016;
+            --bg-card-hover: #14161F;
+            --border-line: rgba(255, 255, 255, 0.08);
+            --primary: #2962FF;
+            --primary-glow: rgba(41, 98, 255, 0.3);
+            --cyan: #00F0FF;
+            --pink: #F50057;
+            --success: #00E676;
+            --text-main: #FFFFFF;
+            --text-muted: #8F9BB3;
+            --sidebar-w: 280px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* --- 2. Layout (Flex + Sticky) --- */
+        .app-container { display: flex; min-height: 100vh; width: 100%; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            height: 100vh;
+            position: sticky; top: 0;
+            background: rgba(4, 5, 10, 0.95);
+            border-right: 1px solid var(--border-line);
+            padding: 30px 20px;
+            display: flex; flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .brand {
+            font-family: 'Inter', sans-serif; font-weight: 900; font-size: 32px;
+            color: #fff; margin-bottom: 30px; padding-left: 10px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .brand span { color: var(--primary); }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            color: var(--text-muted); text-decoration: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .nav-item.active { 
+            background: rgba(41, 98, 255, 0.15); color: #fff; 
+            border-color: rgba(41, 98, 255, 0.3);
+        }
+
+        .lang-toggle {
+            display: flex; background: rgba(255,255,255,0.05); padding: 4px; 
+            border-radius: 8px; margin-top: 20px;
+        }
+        .lang-btn {
+            flex: 1; border: none; background: transparent; color: var(--text-muted);
+            padding: 8px; font-size: 12px; font-weight: 700; cursor: pointer; 
+            border-radius: 6px; transition: 0.2s;
+        }
+        .lang-btn.active { background: var(--text-main); color: #000; }
+
+        /* --- 3. Main Content --- */
+        .main {
+            flex: 1; min-width: 0; padding: 60px 80px 150px;
+            max-width: 1600px; margin: 0 auto;
+        }
+
+        /* Typography */
+        h1 { font-size: 56px; font-weight: 800; line-height: 1.1; margin-bottom: 30px; letter-spacing: -1.5px; }
+        h1 span { 
+            background: linear-gradient(135deg, #fff 0%, #82B1FF 100%); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        }
+        
+        .section-head { margin-bottom: 25px; display: flex; align-items: center; gap: 15px; }
+        .head-title { font-size: 32px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+
+        section { margin-bottom: 80px; scroll-margin-top: 40px; }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px;
+        }
+        .full-width { grid-column: 1 / -1; }
+
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-line);
+            border-radius: 20px; padding: 32px; position: relative; overflow: hidden;
+            transition: transform 0.2s; display: flex; flex-direction: column;
+        }
+        .card:hover { border-color: rgba(41, 98, 255, 0.5); transform: translateY(-2px); background: var(--bg-card-hover); }
+
+        h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #fff; margin-top: 0; }
+        p { color: var(--text-muted); margin-bottom: 16px; font-size: 15px; }
+        
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 10px; color: var(--text-muted); padding-left: 20px; position: relative; font-size: 14px; }
+        li::before { content: "•"; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
+        strong { color: #fff; font-weight: 600; }
+
+        /* --- 4. Special Components --- */
+
+        /* Link Grid (Web3 充电站) - 恢复并优化 */
+        .link-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 20px;
+        }
+        .web3-btn {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-line);
+            padding: 12px 20px; border-radius: 8px; color: var(--text-muted);
+            text-decoration: none; font-size: 14px; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between; transition: 0.2s;
+        }
+        .web3-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 240, 255, 0.05); }
+        .web3-btn::after { content: "↗"; font-size: 12px; opacity: 0.5; }
+
+        /* 联系人 Badge */
+        .contact-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .contact-left { display: flex; align-items: center; gap: 12px; }
+        .role-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800;
+            color: #fff; white-space: nowrap; min-width: 50px;
+        }
+
+        /* 业务生态图标卡 */
+        .eco-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .eco-item {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-line);
+            border-radius: 12px; padding: 20px; text-align: center; transition: 0.2s;
+        }
+        .eco-item:hover { border-color: var(--cyan); background: rgba(0,240,255,0.05); }
+        .eco-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+        .eco-name { font-weight: 700; color: #fff; display: block; font-size: 14px; }
+        .eco-desc { font-size: 12px; color: var(--text-muted); margin-top: 5px; display: block; }
+
+        /* 职业发展阶梯 */
+        .career-path {
+            display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.02);
+            padding: 20px; border-radius: 12px; margin-top: 15px;
+        }
+        .path-box { flex: 1; text-align: center; }
+        .path-title { color: var(--primary); font-weight: 800; font-size: 18px; display: block; }
+        .path-sub { font-size: 12px; color: var(--text-muted); }
+        .path-arrow { color: var(--text-muted); font-size: 20px; }
+
+        /* 底部 Dock */
+        .dock {
+            position: fixed; bottom: 30px; right: 40px;
+            background: rgba(14, 16, 22, 0.9); border: 1px solid var(--primary);
+            padding: 12px 24px; border-radius: 50px;
+            display: flex; align-items: center; gap: 20px;
+            box-shadow: 0 10px 40px rgba(41, 98, 255, 0.2);
+            backdrop-filter: blur(10px); z-index: 999;
+        }
+        .copy-btn {
+            background: var(--primary); color: #fff; border: none;
+            padding: 6px 16px; border-radius: 20px; font-weight: 700; cursor: pointer;
+        }
+
+        /* 语言控制 */
+        [data-lang="en"] { display: none; }
+        body.en [data-lang="cn"] { display: none; }
+        body.en [data-lang="en"] { display: block; }
+
+        @media (max-width: 1200px) {
+            .main { padding: 40px; }
+            .eco-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body class="cn">
+
+<div class="app-container">
+    
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="brand"><span>//</span> GATE</div>
+        
+        <div class="nav-menu">
+            <a href="#welcome" class="nav-item active"><span>👋</span> <span data-lang="cn">欢迎致辞</span><span data-lang="en">Welcome</span></a>
+            <a href="#about" class="nav-item"><span>🚀</span> <span data-lang="cn">关于 Gate</span><span data-lang="en">About Gate</span></a>
+            <a href="#ecosystem" class="nav-item"><span>🌐</span> <span data-lang="cn">业务生态</span><span data-lang="en">Ecosystem</span></a>
+            <a href="#culture" class="nav-item"><span>🧬</span> <span data-lang="cn">文化价值观</span><span data-lang="en">Culture</span></a>
+            <a href="#setup" class="nav-item"><span>💻</span> <span data-lang="cn">办公与 IT</span><span data-lang="en">Work Setup</span></a>
+            <a href="#growth" class="nav-item"><span>📈</span> <span data-lang="cn">成长与试用</span><span data-lang="en">Growth</span></a>
+            <a href="#benefits" class="nav-item"><span>🎁</span> <span data-lang="cn">全景福利</span><span data-lang="en">Total Rewards</span></a>
+            <a href="#security" class="nav-item"><span>🛡️</span> <span data-lang="cn">安全高压线</span><span data-lang="en">Security</span></a>
+            <a href="#resources" class="nav-item"><span>🔗</span> <span data-lang="cn">资源与黄页</span><span data-lang="en">Resources</span></a>
+        </div>
+
+        <div class="lang-toggle">
+            <button class="lang-btn active" onclick="setLang('cn', this)">中文</button>
+            <button class="lang-btn" onclick="setLang('en', this)">EN</button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        
+        <!-- Welcome -->
+        <section id="welcome">
+            <div class="card full-width" style="border: 1px solid var(--primary); background: linear-gradient(180deg, rgba(41,98,255,0.08), transparent);">
+                <div style="max-width: 800px;">
+                    <span style="color:var(--primary); font-weight:bold; letter-spacing:1px; font-size:12px;">NEW ONBOARDING 2026</span>
+                    <h1 data-lang="cn">欢迎登船，<br><span>未来的构建者。</span></h1>
+                    <h1 data-lang="en">Welcome Aboard,<br><span>Future Architect.</span></h1>
+                    
+                    <div data-lang="cn">
+                        <p style="font-size:18px; color:#fff; font-weight:600;">Hi 宝子，欢迎加入 Gate！👋</p>
+                        <p>欢迎你成为 Gate 的一员！从今天开始，你就和我们一起踏上新的旅程啦。这里有一群有活力、有想法、也乐于分享的伙伴们。这份<strong>《Gate 全景融入指南》</strong>整合了所有生存法则，是你最强力的“入职外挂”。</p>
+                    </div>
+                    <div data-lang="en">
+                        <p style="font-size:18px; color:#fff; font-weight:600;">Hi there, Welcome to Gate! 👋</p>
+                        <p>Welcome to the team! This <strong>"Gate Master Guide"</strong> is your ultimate survival kit. Let's build the future of Web3 together.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About -->
+        <section id="about">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🚀 Gate 辉煌历程</span><span data-lang="en">🚀 Gate Milestones</span></div></div>
+            
+            <div class="card full-width">
+                <div data-lang="cn">
+                    <h3>我们是谁</h3>
+                    <p>Gate 成立于 2013 年，是全球领先的加密货币交易所，拥有超 <strong>4600 万用户</strong>。币种交易量与流动性长期稳居<strong>全球前三</strong>。我们拥有 124% 的储备金率，覆盖用户资产近 500 种。</p>
+                </div>
+                <div data-lang="en">
+                    <h3>Who We Are</h3>
+                    <p>Founded in 2013, Gate serves over <strong>46 million users</strong> worldwide. We consistently rank in the <strong>Top 3 globally</strong> for liquidity and volume. We maintain a 124% reserve ratio.</p>
+                </div>
+                
+                <div style="display:flex; justify-content:space-between; margin-top:30px; text-align:center; position:relative;">
+                    <div style="position:absolute; top:10px; left:0; width:100%; height:1px; background:#333; z-index:0;"></div>
+                    <div><div style="width:20px;height:20px;background:#000;border:2px solid var(--primary);border-radius:50%;margin:0 auto 10px;position:relative;z-index:1;"></div><strong style="font-size:18px;">2013</strong><div style="font-size:12px;color:#888;">Founded</div></div>
+                    <div><div style="width:20px;height:20px;background:#000;border:2px solid var(--primary);border-radius:50%;margin:0 auto 10px;position:relative;z-index:1;"></div><strong style="font-size:18px;">2020</strong><div style="font-size:12px;color:#888;">100% PoR</div></div>
+                    <div><div style="width:20px;height:20px;background:#000;border:2px solid var(--primary);border-radius:50%;margin:0 auto 10px;position:relative;z-index:1;"></div><strong style="font-size:18px;">2024</strong><div style="font-size:12px;color:#888;">15M+ Users</div></div>
+                    <div><div style="width:20px;height:20px;background:var(--primary);border-radius:50%;margin:0 auto 10px;position:relative;z-index:1;box-shadow:0 0 15px var(--primary);"></div><strong style="font-size:18px;color:var(--primary);">2026</strong><div style="font-size:12px;color:#888;">Future</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ecosystem -->
+        <section id="ecosystem">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🌐 业务生态全景</span><span data-lang="en">🌐 Ecosystem Overview</span></div></div>
+            <div class="card full-width">
+                <p data-lang="cn">我们不只是交易所，更是在构建一个完整的开放金融生态系统。</p>
+                <p data-lang="en">We are not just an exchange, but building a complete open financial ecosystem.</p>
+                
+                <div class="eco-grid">
+                    <div class="eco-item">
+                        <span class="eco-icon">📈</span>
+                        <span class="eco-name" data-lang="cn">交易服务</span><span class="eco-name" data-lang="en">Trading</span>
+                        <span class="eco-desc" data-lang="cn">现货 / 合约 / 杠杆</span><span class="eco-desc" data-lang="en">Spot / Futures</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">💰</span>
+                        <span class="eco-name" data-lang="cn">财富管理</span><span class="eco-name" data-lang="en">Earn</span>
+                        <span class="eco-desc" data-lang="cn">理财 / 借贷 / 鲨鱼鳍</span><span class="eco-desc" data-lang="en">Lending / Structured</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">🦄</span>
+                        <span class="eco-name">Gate Startup</span>
+                        <span class="eco-desc" data-lang="cn">全球首发项目平台</span><span class="eco-desc" data-lang="en">Token Launchpad</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">🔗</span>
+                        <span class="eco-name">GateChain</span>
+                        <span class="eco-desc" data-lang="cn">高性能公链生态</span><span class="eco-desc" data-lang="en">Public Blockchain</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">👛</span>
+                        <span class="eco-name">Web3 Wallet</span>
+                        <span class="eco-desc" data-lang="cn">非托管去中心化入口</span><span class="eco-desc" data-lang="en">Decentralized Portal</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">🏦</span>
+                        <span class="eco-name">Gate Institutional</span>
+                        <span class="eco-desc" data-lang="cn">机构级交易服务</span><span class="eco-desc" data-lang="en">Institutional Service</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">🎁</span>
+                        <span class="eco-name">Gate NFT</span>
+                        <span class="eco-desc" data-lang="cn">数字艺术交易平台</span><span class="eco-desc" data-lang="en">NFT Marketplace</span>
+                    </div>
+                    <div class="eco-item">
+                        <span class="eco-icon">🎓</span>
+                        <span class="eco-name">Gate Learn</span>
+                        <span class="eco-desc" data-lang="cn">区块链知识学院</span><span class="eco-desc" data-lang="en">Crypto Academy</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Culture -->
+        <section id="culture">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🧬 文化与价值观</span><span data-lang="en">🧬 Culture & Values</span></div></div>
+            <div class="bento-grid">
+                <div class="card">
+                    <h3 data-lang="cn">💎 核心价值观</h3><h3 data-lang="en">💎 Core Values</h3>
+                    <ul data-lang="cn">
+                        <li><strong>正直 (Integrity)：</strong> 坚持底线，不作恶。</li>
+                        <li><strong>洞察 (Insight)：</strong> 追求长远价值。</li>
+                        <li><strong>创新 (Innovation)：</strong> 挑战成见，保持敏捷。</li>
+                        <li><strong>求知 (Purpose)：</strong> 谦逊坦诚，快速学习。</li>
+                        <li><strong>合作 (Cooperation)：</strong> 追求对公司最好，共赢思维。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>Integrity:</strong> Do no evil; walk the talk.</li>
+                        <li><strong>Insight:</strong> Pursue long-term value.</li>
+                        <li><strong>Innovation:</strong> Challenge assumptions.</li>
+                        <li><strong>Purpose:</strong> Learn fast; be humble.</li>
+                        <li><strong>Cooperation:</strong> Win-win thinking.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 data-lang="cn">⚡️ One Gate Spirit</h3><h3 data-lang="en">⚡️ One Gate Spirit</h3>
+                    <p data-lang="cn"><strong>Ego 小，格局大。</strong></p>
+                    <p data-lang="en"><strong>Small Ego, Big Picture.</strong></p>
+                    <ul data-lang="cn">
+                        <li><strong>首问负责：</strong> 事情交给你，就是交给 Gate。</li>
+                        <li><strong>高效协作：</strong> 把同事当客户对待。</li>
+                        <li><strong>称呼文化：</strong> <span style="color:var(--cyan)">直呼英文名</span> (如 Lin)，不必叫总/老师。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>Ownership:</strong> You represent Gate.</li>
+                        <li><strong>Efficiency:</strong> Treat colleagues like customers.</li>
+                        <li><strong>Naming:</strong> Call by English Name. No titles.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Work Setup -->
+        <section id="setup">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">💻 办公与 IT 设置</span><span data-lang="en">💻 Work & IT Setup</span></div></div>
+            <div class="bento-grid">
+                <div class="card">
+                    <h3 data-lang="cn">远程办公守则</h3><h3 data-lang="en">Remote Policy</h3>
+                    <ul data-lang="cn">
+                        <li><strong>工作时段：</strong> 保持 Lark 在线。</li>
+                        <li><strong>非工作时段：</strong> 消息可达。需及时响应。</li>
+                        <li><strong>环境：</strong> 安静、网络稳定。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>On Duty:</strong> Stay online on Lark.</li>
+                        <li><strong>Off Duty:</strong> Be reachable.</li>
+                        <li><strong>Env:</strong> Stable internet & quiet.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 data-lang="cn">IT 关键信息</h3><h3 data-lang="en">IT Essentials</h3>
+                    <ul data-lang="cn">
+                        <li><strong>账号：</strong> 入职当天 HRO 开启 Lark。</li>
+                        <li><strong>软件：</strong> 必装安全软件 (密码见右下角)。</li>
+                        <li><strong>VPN/邮箱：</strong> Lark 工作台申请。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>Account:</strong> Lark opened on Day 1.</li>
+                        <li><strong>Software:</strong> Mandatory install.</li>
+                        <li><strong>VPN/Email:</strong> Apply via Lark.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Growth Section -->
+        <section id="growth">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">📈 成长与职业发展</span><span data-lang="en">📈 Growth & Career Path</span></div></div>
+            
+            <div class="card full-width">
+                <h3 data-lang="cn">职业发展双通道</h3><h3 data-lang="en">Dual Career Path</h3>
+                <div class="career-path">
+                    <div class="path-box">
+                        <span class="path-title">P 序列</span>
+                        <span class="path-sub" data-lang="cn">专业/技术路线<br>深耕领域专家</span>
+                        <span class="path-sub" data-lang="en">Professional Path<br>Subject Matter Expert</span>
+                    </div>
+                    <div class="path-arrow">⇄</div>
+                    <div class="path-box">
+                        <span class="path-title">M 序列</span>
+                        <span class="path-sub" data-lang="cn">管理路线<br>团队领导者</span>
+                        <span class="path-sub" data-lang="en">Management Path<br>Team Leader</span>
+                    </div>
+                </div>
+                <div style="margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1);">
+                    <ul data-lang="cn" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <li><strong>活水计划：</strong> 鼓励内部转岗，跨部门发展。</li>
+                        <li><strong>绩效评估：</strong> 季度 OKR 考核，结果导向。</li>
+                    </ul>
+                    <ul data-lang="en" style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <li><strong>Internal Mobility:</strong> Transfer opportunities available.</li>
+                        <li><strong>Performance:</strong> Quarterly OKR review.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bento-grid" style="margin-top:24px;">
+                <div class="card" style="border-left:4px solid var(--success);">
+                    <h3 data-lang="cn">🌟 必修：Gate 探索之旅</h3><h3 data-lang="en">🌟 Gate Discovery</h3>
+                    <ul data-lang="cn">
+                        <li><strong>时间：</strong> 入职第 3 天自动加入 Lark。</li>
+                        <li><strong>要求：</strong> <span style="color:#fff;">30天内</span> 完成所有考试。</li>
+                        <li><strong>注意：</strong> 转正考核一票否决项。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>Time:</strong> Auto-added on Day 3.</li>
+                        <li><strong>Req:</strong> Complete in 30 days.</li>
+                        <li><strong>Note:</strong> Mandatory for probation.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 data-lang="cn">试用期管理</h3><h3 data-lang="en">Probation</h3>
+                    <ul data-lang="cn">
+                        <li><strong>第一周：</strong> 设定考核目标。</li>
+                        <li><strong>中期：</strong> Leader 反馈面谈。</li>
+                        <li><strong>转正：</strong> 提交述职报告。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li><strong>Week 1:</strong> Set goals.</li>
+                        <li><strong>Mid-term:</strong> Feedback session.</li>
+                        <li><strong>Final:</strong> Submit report.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits -->
+        <section id="benefits">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🎁 2026 福利体系</span><span data-lang="en">🎁 2026 Benefits</span></div></div>
+            <div class="bento-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="card" style="border-top:3px solid #FF4081;">
+                    <h1>800 U</h1>
+                    <span style="font-size:12px;color:var(--text-muted);">TEAM BUILDING / YR</span>
+                    <p data-lang="cn" style="font-size:12px; margin-top:5px;">支持跨国团建</p>
+                    <p data-lang="en" style="font-size:12px; margin-top:5px;">Global Travel</p>
+                </div>
+                <div class="card" style="border-top:3px solid var(--cyan);">
+                    <h1>600 U</h1>
+                    <span style="font-size:12px;color:var(--text-muted);">ALLOWANCE (1YR+)</span>
+                    <p data-lang="cn" style="font-size:12px; margin-top:5px;">学习/生活/礼金</p>
+                    <p data-lang="en" style="font-size:12px; margin-top:5px;">Study/Life/Gift</p>
+                </div>
+                <div class="card" style="border-top:3px solid var(--primary);">
+                    <h1>TOP</h1>
+                    <span style="font-size:12px;color:var(--text-muted);">COMPENSATION</span>
+                    <p data-lang="cn" style="font-size:12px; margin-top:5px;">12+ 月年终奖</p>
+                    <p data-lang="en" style="font-size:12px; margin-top:5px;">12+ Mo Bonus</p>
+                </div>
+                <div class="card" style="border-top:3px solid #fff;">
+                    <h1>SHIELD</h1>
+                    <span style="font-size:12px;color:var(--text-muted);">CARE FUND</span>
+                    <p data-lang="cn" style="font-size:12px; margin-top:5px;">重大变故援助</p>
+                    <p data-lang="en" style="font-size:12px; margin-top:5px;">Emergency Aid</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security -->
+        <section id="security">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🛡️ 安全高压线</span><span data-lang="en">🛡️ Security Red Lines</span></div></div>
+            <div class="card full-width" style="background:rgba(245,0,87,0.05); border-color:rgba(245,0,87,0.3);">
+                <h3 style="color:var(--pink);">⚡️ 7 条高压线 (严禁触碰) / Zero Tolerance</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <ul data-lang="cn">
+                        <li>违反信息安全保护和保密义务；</li>
+                        <li>索要或收受贿赂等一切腐败行为；</li>
+                        <li>严重不诚信，弄虚作假；</li>
+                        <li>利用职权谋取私利；</li>
+                    </ul>
+                    <ul data-lang="cn">
+                        <li>损害公司利益；</li>
+                        <li>参与洗钱、恐怖融资；</li>
+                        <li>骚扰歧视，散播敏感信息。</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li>Data security violation;</li>
+                        <li>Bribery and corruption;</li>
+                        <li>Serious dishonesty;</li>
+                        <li>Abuse of power;</li>
+                    </ul>
+                    <ul data-lang="en">
+                        <li>Harming company interests;</li>
+                        <li>Money laundering;</li>
+                        <li>Harassment/Discrimination.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resources & Contact -->
+        <section id="resources">
+            <div class="section-head"><div class="head-title"><span data-lang="cn">🔗 资源与黄页</span><span data-lang="en">🔗 Resources & Contacts</span></div></div>
+            
+            <div class="card full-width">
+                <h3 data-lang="cn">Web3 行业必读</h3><h3 data-lang="en">Industry Must-Reads</h3>
+                <!-- 恢复的链接区域 -->
+                <div class="link-grid">
+                    <a href="https://www.odaily.news/" target="_blank" class="web3-btn">Odaily</a>
+                    <a href="https://www.theblockbeats.info/" target="_blank" class="web3-btn">BlockBeats</a>
+                    <a href="https://www.techflowpost.com/" target="_blank" class="web3-btn">DeepFlow</a>
+                    <a href="https://www.panewslab.com/" target="_blank" class="web3-btn">PANews</a>
+                    <a href="https://www.coindesk.com/" target="_blank" class="web3-btn">CoinDesk</a>
+                    <a href="https://cointelegraph.com/" target="_blank" class="web3-btn">Cointelegraph</a>
+                    <a href="https://www.coursera.org/" target="_blank" class="web3-btn">Coursera</a>
+                    <a href="https://www.udemy.com/" target="_blank" class="web3-btn">Udemy</a>
+                </div>
+            </div>
+
+            <div class="bento-grid" style="margin-top:24px;">
+                <div class="card">
+                    <h3>HR / Admin</h3>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:var(--primary);">HRBP</span>Penny</div>
+                        <span style="font-size:12px; color:var(--text-muted);">Business / ER</span>
+                    </div>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:var(--cyan); color:#000;">OPS</span>Tania</div>
+                        <span style="font-size:12px; color:var(--text-muted);">Onboarding</span>
+                    </div>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:#FF4081;">Admin</span>Maria</div>
+                        <span style="font-size:12px; color:var(--text-muted);">Assets</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Finance / Tech</h3>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:#FFAB00; color:#000;">Fin</span>Nina</div>
+                        <span style="font-size:12px; color:var(--text-muted);">Payroll</span>
+                    </div>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:#7C4DFF;">IT</span>Zane</div>
+                        <span style="font-size:12px; color:var(--text-muted);">VPN / Software</span>
+                    </div>
+                    <div class="contact-row">
+                        <div class="contact-left"><span class="role-badge" style="background:#00E676; color:#000;">L&D</span>Eamon</div>
+                        <span style="font-size:12px; color:var(--text-muted);">Training</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <div style="text-align:center; padding-top:40px; border-top:1px solid var(--border-line); color:var(--text-muted); font-size:13px;">
+            <div style="margin-top: 15px; font-family: 'Inter'; font-weight: 800; font-size: 24px; color: #fff;">
+                One Gate, One Team.
+            </div>
+            <p style="margin-top:5px;">Gate Global HR Team © 2026</p>
+        </div>
+
+    </main>
+</div>
+
+<!-- Floating Password Bar -->
+<div class="dock">
+    <div style="display:flex; flex-direction:column;">
+        <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">IT INSTALL CODE</span>
+        <span style="font-family:'JetBrains Mono'; color:var(--cyan); font-weight:bold; font-size:16px;">F16235#6</span>
+    </div>
+    <button class="copy-btn" onclick="copyText('F16235#6')">COPY</button>
+</div>
+
+<script>
+    function copyText(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Copied: " + text);
+        });
+    }
+
+    function setLang(lang, btn) {
+        document.body.className = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    
+    // Auto highlight nav
+    window.addEventListener('scroll', () => {
+        let current = '';
+        document.querySelectorAll('section').forEach(section => {
+            if (scrollY >= section.offsetTop - 150) current = section.getAttribute('id');
+        });
+        document.querySelectorAll('.nav-item').forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').includes(current)) link.classList.add('active');
+        });
+    });
+</script>
+
+</body>
+</html>
