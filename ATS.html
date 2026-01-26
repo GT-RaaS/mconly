@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级招聘系统全流程与功能规格书 (V18.0 Stable)</title>
+    <!-- 引入 Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #F5F7FA;
+            --bg-card: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border-color: #E5E7EB;
+            
+            /* 阶段色系 */
+            --color-plan: #3370FF;
+            --color-source: #8F959E;
+            --color-eval: #FF8800;
+            --color-offer: #00D6B9;
+            
+            --highlight-bg: #FEF9C3;
+            --highlight-border: #F59E0B;
+            
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0; padding: 20px;
+            height: 100vh; box-sizing: border-box;
+            display: flex; gap: 20px;
+            overflow: hidden;
+        }
+
+        /* === 左侧：流程图容器 (修复滚动和缩放) === */
+        .diagram-wrapper {
+            flex: 0 0 550px; /* 增加宽度，视野更好 */
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-top: 4px solid var(--color-plan);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        /* 核心修复：允许溢出滚动 */
+        .diagram-scroll-container {
+            flex: 1;
+            overflow: auto; /* 开启原生滚动 */
+            padding: 40px;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background-image: radial-gradient(#E5E7EB 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 缩放的目标容器 */
+        #zoom-target {
+            transform-origin: top center;
+            transition: transform 0.2s ease-out; /* 平滑缩放动画 */
+        }
+
+        /* 缩放控制按钮 (悬浮) */
+        .zoom-controls {
+            position: absolute; bottom: 30px; right: 30px;
+            display: flex; gap: 10px; z-index: 100;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+        }
+        .zoom-btn {
+            width: 36px; height: 36px;
+            border: 1px solid #E5E7EB; background: #FFF; border-radius: 6px;
+            cursor: pointer; font-size: 20px; font-weight: bold; color: #374151;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.1s;
+        }
+        .zoom-btn:hover { background: #F3F4F6; color: var(--color-plan); border-color: var(--color-plan); }
+        .zoom-btn:active { transform: scale(0.95); }
+
+        /* Mermaid 节点样式 */
+        g.node { cursor: pointer !important; }
+        g.node rect, g.node circle, g.node polygon { fill: #fff !important; transition: all 0.3s; }
+        /* 悬停高亮 */
+        g.node:hover rect { 
+            stroke: #3370FF !important; stroke-width: 3px !important; 
+            fill: #EFF6FF !important; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        /* === 右侧：规格书区域 === */
+        .specs-container {
+            flex: 1; overflow-y: auto; padding-right: 10px; scroll-behavior: smooth;
+        }
+        .header { margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .header p { margin: 5px 0 0; color: var(--text-secondary); font-size: 14px; }
+
+        .stage-section { margin-bottom: 40px; }
+        .stage-title {
+            font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+            margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .stage-plan .stage-title { color: var(--color-plan); border-color: var(--color-plan); }
+        .stage-source .stage-title { color: var(--color-source); border-color: var(--color-source); }
+        .stage-eval .stage-title { color: var(--color-eval); border-color: var(--color-eval); }
+        .stage-offer .stage-title { color: var(--color-offer); border-color: var(--color-offer); }
+
+        .node-card {
+            background: var(--bg-card); border-radius: var(--radius); padding: 24px;
+            margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid transparent; transition: all 0.3s;
+            scroll-margin-top: 20px;
+        }
+        .node-card.active {
+            background-color: var(--highlight-bg);
+            border-color: var(--highlight-border) !important;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+            border-left: 4px solid var(--highlight-border) !important;
+        }
+
+        .stage-plan .node-card { border-left-color: var(--color-plan); }
+        .stage-source .node-card { border-left-color: var(--color-source); }
+        .stage-eval .node-card { border-left-color: var(--color-eval); }
+        .stage-offer .node-card { border-left-color: var(--color-offer); }
+
+        .node-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; border-bottom: 1px solid #F3F4F6; padding-bottom: 12px;
+        }
+        .node-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        .node-id { font-size: 12px; color: var(--text-secondary); font-family: monospace; background: #F3F4F6; padding: 2px 6px; border-radius: 4px; }
+
+        .spec-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 24px; }
+        .col h4 { font-size: 12px; font-weight: 700; color: #6B7280; margin-bottom: 12px; text-transform: uppercase; }
+        
+        .spec-list { list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 1.6; }
+        .spec-list li { margin-bottom: 8px; position: relative; padding-left: 14px; }
+        .spec-list li::before { content: "•"; position: absolute; left: 0; color: #9CA3AF; }
+
+        .rule-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+        .tag-red { background: #FEE2E2; color: #B91C1C; }
+        .tag-blue { background: #DBEAFE; color: #1E40AF; }
+
+        /* 回到首页悬浮按钮 */
+        .home-floating-btn {
+            position: fixed; bottom: 30px; right: 40px;
+            width: 50px; height: 50px;
+            background: var(--color-plan); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(51, 112, 255, 0.4);
+            cursor: pointer; z-index: 1000; font-size: 24px;
+            border: none; transition: all 0.2s;
+        }
+        .home-floating-btn:hover { transform: scale(1.1); background: #2563EB; }
+        .home-floating-btn:active { transform: scale(0.95); }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<!-- 左侧：流程图容器 -->
+<div class="diagram-wrapper">
+    <!-- 原生滚动容器 -->
+    <div class="diagram-scroll-container">
+        <!-- 缩放目标 -->
+        <div id="zoom-target">
+            <div class="mermaid">
+            %%{init: {'theme': 'base', 'securityLevel': 'loose', 'themeVariables': { 'fontFamily': 'Inter', 'primaryColor': '#fff', 'edgeLabelBackground':'#fff', 'fontSize': '14px', 'lineColor': '#666'}}}%%
+            graph TD
+                Start((开始)) --> N1
+                
+                %% Phase 1: Planning
+                subgraph Stage1 [第一阶段：需求与规划]
+                    direction TB
+                    N1[业务部门提出招聘需求]:::plan --> N2[HRBP审核与规划]:::plan
+                    N2 --> D1{需求审批}:::plan
+                    D1 -- 批准 --> N3[HRBP创建职位]:::plan
+                    D1 -- 拒绝 --> N4[退回修改需求]:::plan
+                    N4 --> Stop1((结束))
+                    N3 --> N5[系统自动发布至所有预设渠道]:::plan
+                end
+
+                %% Phase 2: Sourcing
+                subgraph Stage2 [第二阶段：简历获取与处理]
+                    direction TB
+                    N5 --> N6[多渠道简历统一归集]:::source
+                    N6 --> D2{智能查重}:::source
+                    D2 -- 是重复简历 --> N7[激活人才库中现有记录]:::source
+                    D2 -- 是新简历 --> N8[AI简历解析]:::source
+                    N8 --> N9[TA人工复核与信息完善]:::source
+                    N7 --> N10[存入统一人才库]:::source
+                    N9 --> N10
+                end
+
+                %% Phase 3: Evaluation
+                subgraph Stage3 [第三阶段：甄选与面试]
+                    direction TB
+                    N10 --> N11[TA推荐至具体职位]:::eval
+                    N11 --> N12[HRBP审核简历]:::eval
+                    N12 -.-> N12B[加签:业务审核]:::eval
+                    N12B -.-> N12
+                    N12 --> D3{通过?}:::eval
+                    D3 -- 否 --> N13[退回人才库]:::eval
+                    D3 -- 是 --> N14[智能面试安排]:::eval
+                    N14 --> N15[系统同步面试官日历]:::eval
+                    N15 --> N16[TA一键发送邀约]:::eval
+                    N16 --> N17[一体化面试工作台]:::eval
+                    N17 --> N18[面试官提交结构化反馈]:::eval
+                    N18 --> N19[反馈自动汇总至档案]:::eval
+                end
+
+                %% Phase 4: Offer & Onboard
+                subgraph Stage4 [第四阶段：录用与入职]
+                    direction TB
+                    N19 --> N20[HRBP综合评估后TA发起Offer]:::offer
+                    N20 --> N21[电子化审批流]:::offer
+                    N21 --> N22[系统生成并发送电子Offer]:::offer
+                    N22 --> N23[候选人线上签署]:::offer
+                    N23 --> N24[系统自动生成待入职任务]:::offer
+                    N24 --> N25[候选人入职]:::offer
+                    N25 --> N26[HC数据更新并同步HR系统]:::offer
+                end
+
+                N26 --> End((流程结束))
+
+                %% Styling
+                classDef plan fill:#EFF6FF,stroke:#3370FF,stroke-width:2px;
+                classDef source fill:#F5F3FF,stroke:#8F959E,stroke-width:2px;
+                classDef eval fill:#FFFBEB,stroke:#FF8800,stroke-width:2px;
+                classDef offer fill:#ECFDF5,stroke:#00D6B9,stroke-width:2px;
+
+                %% 点击事件绑定
+                click N1 call window.scrollToCard("N1")
+                click N2 call window.scrollToCard("N2")
+                click D1 call window.scrollToCard("D1")
+                click N3 call window.scrollToCard("N3")
+                click N5 call window.scrollToCard("N5")
+                click N6 call window.scrollToCard("N6")
+                click D2 call window.scrollToCard("D2")
+                click N7 call window.scrollToCard("N7")
+                click N8 call window.scrollToCard("N8")
+                click N9 call window.scrollToCard("N9")
+                click N10 call window.scrollToCard("N10")
+                click N11 call window.scrollToCard("N11")
+                click N12 call window.scrollToCard("N12")
+                click D3 call window.scrollToCard("D3")
+                click N13 call window.scrollToCard("N13")
+                click N14 call window.scrollToCard("N14")
+                click N15 call window.scrollToCard("N15")
+                click N16 call window.scrollToCard("N16")
+                click N17 call window.scrollToCard("N17")
+                click N18 call window.scrollToCard("N18")
+                click N19 call window.scrollToCard("N19")
+                click N20 call window.scrollToCard("N20")
+                click N21 call window.scrollToCard("N21")
+                click N22 call window.scrollToCard("N22")
+                click N23 call window.scrollToCard("N23")
+                click N24 call window.scrollToCard("N24")
+                click N25 call window.scrollToCard("N25")
+                click N26 call window.scrollToCard("N26")
+            </div>
+        </div>
+    </div>
+
+    <!-- 缩放控制按钮 -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="放大">＋</button>
+        <button class="zoom-btn" onclick="zoomReset()" title="重置">⟲</button>
+        <button class="zoom-btn" onclick="zoomOut()" title="缩小">－</button>
+    </div>
+</div>
+
+<!-- 右侧：详细规格书 (Lark Integrated) -->
+<div class="specs-container">
+    <div class="header">
+        <h1>招聘系统详细规格书 (Lark Integrated V18.0)</h1>
+        <p>基于 Lark (飞书) 生态的全流程深度拆解与规则定义。</p>
+    </div>
+
+    <!-- STAGE 1: PLANNING -->
+    <div class="stage-section stage-plan">
+        <div class="stage-title">第一阶段：需求启动与发布</div>
+        
+        <div class="node-card" id="card-N1">
+            <div class="node-header"><span class="node-name">业务部门提出招聘需求</span> <span class="node-id">N1</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Lark 智能提单：</strong> 直接在 Lark 工作台发起，自动带出 Cost Center 和汇报关系。</li>
+                        <li><strong>JD 模板库：</strong> 根据职能/职级自动填充标准JD。</li>
+                        <li><strong>HC 预校验：</strong> 提单时实时查询编制余额。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (HC计算公式)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">定义</span> <strong>待入职人数</strong> = 待招人员 (招聘系统) + 在途人员 (招聘系统)</li>
+                        <li><span class="rule-tag tag-red">定义</span> <strong>当前已审批HC</strong> = 当前在职人数 (from 花名册) + 待入职人数</li>
+                        <li><span class="rule-tag tag-red">定义</span> <strong>季度末预期HC</strong> = 当前已审批HC - 本季度拟缩减HC (from 业务leader)</li>
+                        <li><span class="rule-tag tag-blue">校验</span> 提单时需满足：当前已审批HC ≤ 部门编制上限。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>专家补充 (Expert Notes)</h4>
+                    <ul class="spec-list">
+                        <li>建议增加“替补/新增”选项，替补需关联离职员工ID。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N2">
+            <div class="node-header"><span class="node-name">HRBP审核与规划</span> <span class="node-id">N2</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>需求看板：</strong> 可视化待办任务。</li>
+                        <li><strong>在线修订：</strong> 直接修改JD与薪资范围（留痕）。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">SLA</span> 超过24小时未处理发送 Lark 机器人催办。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>专家补充 (Expert Notes)</h4>
+                    <ul class="spec-list">
+                        <li>侧边栏展示部门人才梯队分布图。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-D1">
+            <div class="node-header"><span class="node-name">需求审批 (审批流)</span> <span class="node-id">D1</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>动态审批引擎：</strong> 支持串/并行、会签、或签。</li>
+                        <li><strong>Lark 审批集成：</strong> 审批单直接推送至 Lark 审批中心。</li>
+                        <li><strong>可视化：</strong> 实时查看审批链路。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">条件触发</span> 若薪资 > Band Max，自动增加 C&B 专家节点。</li>
+                        <li><span class="rule-tag tag-red">条件触发</span> 若职级 ≥ 总监级，自动增加 CEO 节点。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>专家补充 (Expert Notes)</h4>
+                    <ul class="spec-list">
+                        <li>审批通过瞬间，生成 Req ID 并冻结 HC。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N3">
+            <div class="node-header"><span class="node-name">HRBP创建职位</span> <span class="node-id">N3</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>一键转职位：</strong> 需求单自动转化为 Job。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">HC冻结</span> 对应HC名额进入占用状态。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N5">
+            <div class="node-header"><span class="node-name">系统自动发布至所有预设渠道</span> <span class="node-id">N5</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>渠道聚合分发：</strong> 一键同步至猎聘、Boss、官网、LinkedIn。</li>
+                        <li><strong>Lark 推送：</strong> 生成内推海报推送到 Lark 全员群/岗位群。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">映射</span> 内部职级(P7) 自动映射为外部Title。</li>
+                        <li><span class="rule-tag tag-blue">时效</span> 职位广告默认有效期30天。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 2: SOURCING -->
+    <div class="stage-section stage-source">
+        <div class="stage-title">第二阶段：简历获取与清洗</div>
+        
+        <div class="node-card" id="card-N6">
+            <div class="node-header"><span class="node-name">多渠道简历统一归集</span> <span class="node-id">N6</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>RPA 抓取：</strong> 自动解析邮件/网页简历。</li>
+                        <li><strong>渠道归因：</strong> 自动标记来源（如：猎头A、Lark内推）。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-D2">
+            <div class="node-header"><span class="node-name">智能查重</span> <span class="node-id">D2</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Global Check：</strong> 全库即时查重引擎。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">强校验</span> 手机号 OR 邮箱完全匹配。</li>
+                        <li><span class="rule-tag tag-red">保护期</span> 若简历在保护期(90天)内，新投递无效。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>专家补充 (Expert Notes)</h4>
+                    <ul class="spec-list">
+                        <li>猎头撞单判定：若库内已有且在有效期，系统自动判定猎头推荐无效。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N7">
+            <div class="node-header"><span class="node-name">激活人才库中现有记录</span> <span class="node-id">N7</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>时间轴合并：</strong> 新记录追加到旧档案。</li>
+                        <li><strong>Lark 唤醒：</strong> 通知原Owner旧资源激活。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N8">
+            <div class="node-header"><span class="node-name">AI 简历解析</span> <span class="node-id">N8</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>OCR+NLP：</strong> 提取200+结构化字段。</li>
+                        <li><strong>Knock-out：</strong> 自动淘汰不符合硬性条件的简历。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N9">
+            <div class="node-header"><span class="node-name">TA人工复核与信息完善</span> <span class="node-id">N9</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>解析校准：</strong> 修正错误字段。</li>
+                        <li><strong>标签管理：</strong> 手动打标（高潜、竞对）。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">完整性</span> 关键字段缺失需补录。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N10">
+            <div class="node-header"><span class="node-name">存入统一人才库</span> <span class="node-id">N10</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Talent Pool：</strong> 简历落库，可被搜索。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 3: EVALUATION -->
+    <div class="stage-section stage-eval">
+        <div class="stage-title">第三阶段：甄选与面试</div>
+
+        <div class="node-card" id="card-N11">
+            <div class="node-header"><span class="node-name">TA推荐至具体职位</span> <span class="node-id">N11</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>流程绑定：</strong> 关联具体 Req ID，状态变更为初筛。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N12">
+            <div class="node-header"><span class="node-name">HRBP审核简历 (含加签)</span> <span class="node-id">N12</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>简历预览：</strong> 在线查看原始文件。</li>
+                        <li><strong>Lark 卡片协作：</strong> 将简历以消息卡片形式推给业务经理，支持在 IM 中点击“感兴趣”或“淘汰”。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">SLA</span> 业务经理需在 24h 内反馈。</li>
+                        <li><span class="rule-tag tag-red">流程</span> 拒绝需必填“淘汰原因”。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-D3">
+            <div class="node-header"><span class="node-name">通过? (决策点)</span> <span class="node-id">D3</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>流程分支</h4>
+                    <ul class="spec-list">
+                        <li><strong>否：</strong> 转入 N13 退回人才库。</li>
+                        <li><strong>是：</strong> 转入 N14 智能面试安排。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N13">
+            <div class="node-header"><span class="node-name">退回人才库</span> <span class="node-id">N13</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>淘汰处理：</strong> 选择原因，发送感谢信，释放归属权。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N14">
+            <div class="node-header"><span class="node-name">智能面试安排</span> <span class="node-id">N14</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Lark 日历同步：</strong> 双向同步 Lark Calendar。</li>
+                        <li><strong>自助预约：</strong> 发送空闲时段链接，候选人自选时间。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N15">
+            <div class="node-header"><span class="node-name">系统同步面试官日历并推荐空闲时间</span> <span class="node-id">N15</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>忙闲计算：</strong> 实时读取 Lark 忙闲状态，推荐公共空闲时段。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N16">
+            <div class="node-header"><span class="node-name">TA一键发送邀约 (含视频链接)</span> <span class="node-id">N16</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>多通道通知：</strong> 邮件+短信+Lark通知。</li>
+                        <li><strong>Lark 妙记集成：</strong> 自动生成 Lark 视频会议链接。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N17">
+            <div class="node-header"><span class="node-name">一体化面试工作台</span> <span class="node-id">N17</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>分屏视图：</strong> 左侧简历，右侧面评表。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N18">
+            <div class="node-header"><span class="node-name">面试官提交结构化反馈</span> <span class="node-id">N18</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>结构化面评：</strong> 预设考察维度（能力、价值观）打分。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">强制</span> 未提交面评表，无法流转至下一轮。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N19">
+            <div class="node-header"><span class="node-name">反馈自动汇总至候选人档案</span> <span class="node-id">N19</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>面试流转：</strong> 通过自动触发下一轮；失败触发淘汰。</li>
+                        <li><strong>过程留痕：</strong> 评价永久归档。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 4: OFFER & ONBOARD -->
+    <div class="stage-section stage-offer">
+        <div class="stage-title">第四阶段：录用与入职</div>
+
+        <div class="node-card" id="card-N20">
+            <div class="node-header"><span class="node-name">HRBP综合评估后TA发起Offer</span> <span class="node-id">N20</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>薪酬测算器：</strong> 自动计算总包（现金+期权+社保成本）。</li>
+                        <li><strong>内部比对：</strong> 展示同级员工薪酬水位 (P50/P75)，防止倒挂。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N21">
+            <div class="node-header"><span class="node-name">电子化审批流 (状态实时同步)</span> <span class="node-id">N21</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Lark 审批集成：</strong> 薪酬审批单推送至 Lark 审批中心。</li>
+                        <li><strong>权限隔离：</strong> 薪资字段仅审批链可见。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">强管控</span> 涨幅 > 30% 或超 Band，强制触发 CEO 审批。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N22">
+            <div class="node-header"><span class="node-name">系统生成并发送电子Offer</span> <span class="node-id">N22</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>模板引擎：</strong> 根据职级/工时制自动套用合同模板。</li>
+                        <li><strong>电子签 (E-Sign)：</strong> 集成 DocuSign/法大大，具备法律效力。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N23">
+            <div class="node-header"><span class="node-name">候选人线上签署</span> <span class="node-id">N23</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>身份核验：</strong> 短信/人脸识别。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-blue">时效</span> Offer 链接默认 3 天有效，超时自动失效。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N24">
+            <div class="node-header"><span class="node-name">系统自动生成待入职任务</span> <span class="node-id">N24</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>Pre-boarding：</strong> 采集身份证/银行卡/照片。</li>
+                        <li><strong>Lark 任务触发：</strong> 自动发 Lark 任务给 IT (开账号)、行政 (工位)。</li>
+                        <li><strong>背调触发：</strong> 自动触发第三方背调API。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N25">
+            <div class="node-header"><span class="node-name">候选人入职</span> <span class="node-id">N25</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>扫码报到：</strong> 现场核销入职状态。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="node-card" id="card-N26">
+            <div class="node-header"><span class="node-name">HC数据自动更新并同步至HR系统</span> <span class="node-id">N26</span></div>
+            <div class="spec-grid">
+                <div class="col">
+                    <h4>核心功能 (Features)</h4>
+                    <ul class="spec-list">
+                        <li><strong>CoreHR 同步：</strong> 数据写入 Lark People (飞书人事) 或 Workday。</li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <h4>业务规则 (Rules)</h4>
+                    <ul class="spec-list">
+                        <li><span class="rule-tag tag-red">背调门禁</span> 必须通过背调才能点击“确认入职”。</li>
+                        <li><span class="rule-tag tag-red">核销</span> 入职当天，Req ID 状态关闭，HC 正式扣减。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 回到首页按钮 -->
+<button class="home-floating-btn" onclick="goHome()" title="回到首页">🏠</button>
+
+<script>
+    // 1. 初始化 Mermaid
+    mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+
+    // 2. 缩放逻辑 (完全使用原生 JS，不依赖 Panzoom 避免冲突)
+    let currentScale = 1;
+    const zoomTarget = document.getElementById('zoom-target');
+    
+    window.zoomIn = function() {
+        currentScale += 0.1;
+        applyZoom();
+    }
+    
+    window.zoomOut = function() {
+        if (currentScale > 0.3) {
+            currentScale -= 0.1;
+            applyZoom();
+        }
+    }
+    
+    window.zoomReset = function() {
+        currentScale = 1;
+        applyZoom();
+    }
+    
+    function applyZoom() {
+        if(zoomTarget) {
+            zoomTarget.style.transform = `scale(${currentScale})`;
+        }
+    }
+
+    // 3. 滚动跳转逻辑
+    window.scrollToCard = function(nodeId) {
+        const targetId = 'card-' + nodeId;
+        const element = document.getElementById(targetId);
+        
+        if (element) {
+            // 移除旧高亮
+            document.querySelectorAll('.node-card').forEach(el => el.classList.remove('active'));
+            
+            // 添加新高亮
+            element.classList.add('active');
+            
+            // 平滑滚动
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            console.log('Target card not found:', targetId);
+        }
+    };
+
+    // 4. 回到首页逻辑
+    window.goHome = function() {
+        // 右侧文档回到顶部
+        const specsContainer = document.querySelector('.specs-container');
+        if (specsContainer) {
+            specsContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // 移除所有高亮
+        document.querySelectorAll('.node-card').forEach(el => el.classList.remove('active'));
+
+        // 重置左侧缩放
+        window.zoomReset();
+
+        // 左侧滚动条重置
+        const diagramScroll = document.querySelector('.diagram-scroll-container');
+        if (diagramScroll) {
+            diagramScroll.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+
+</body>
+</html>
